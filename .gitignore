@@ -1,8 +1,20 @@
+# Project specific files
+output.txt
+
+# Executables
+*.exe
+*.out
+*.app
+*
+!/**/
+!*.*
+
 # Compiled Object files
 *.slo
 *.lo
 *.o
 *.obj
+*.dSYM/
 
 # Precompiled Headers
 *.gch
@@ -23,7 +35,11 @@
 *.a
 *.lib
 
-# Executables
-*.exe
-*.out
-*.app
+# Temporary files
+~*
+*.tmp
+*.swo
+*.swp
+
+# Mac
+.DS_Store
