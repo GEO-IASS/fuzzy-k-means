@@ -5,7 +5,7 @@
    Based on David Robison implementation at https://github.com/drobison/k-means
 
    This program implements both k-means and fuzzy k-means aka fuzzy c-means algorithm
-*/
+   */
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -23,7 +23,7 @@ class Point {
 
   public:
     double x, y;
-    int centroidAssigned; // centroid assigned to point
+    double weightCentroid[10]; // The weight (degree) to which element belongs to centroid
 
     // Constructor with default values 0.0, 0.0
     Point(double x=0.0, double y=0.0):x(x),y(y) {};
@@ -63,8 +63,9 @@ int k = 4;   // k = default number of centroids
 int centroidCount[10];  // number of items by centroid
 int dataCount = 0;  // dataCount = number of lines input.txt
 
+void calculateWeights(int);
 void assignCentroid(Point* item, int point);
-void calculateNewCentroid();
+void calculateNewCentroids();
 
 int main(int argc, char* argv[])
 {
@@ -80,7 +81,8 @@ int main(int argc, char* argv[])
 
   outfile.open(output.c_str());
 
- // Read in input.
+  // Read in input file.
+  // Each line of input file must be two doubles (x and y)
   infile.open(input.c_str());
   if (!infile)
   {
@@ -112,13 +114,10 @@ int main(int argc, char* argv[])
     outfile << "Centroid " << i << ", " << centroid[i] << endl;
   }
 
-  // For k-means algorithm (not fuzzy)
-  // Read all points and calculate the closest centroid
-  // Assign points to centroids based on closest mean
-  for( int i=0; i<dataCount; i++)
-  {
-    assignCentroid( &items[i], i );
-  }
+  // Once define the first set of centroids, 
+  // is need to calculate the weights per point, per centroid
+  calculateWeights(2);
+
   // Show items by centroid
   for( int i=0; i<k; i++)
   {
@@ -126,69 +125,65 @@ int main(int argc, char* argv[])
   }
   // Open output
 
-  for( int i=0; i<4; i++)
+  // Run 4 times, calculanting new centroids 
+  for( int i=0; i < 20; i++)
   {
-    calculateNewCentroid();
-    for( int i=0; i<dataCount; i++)
-    {
-      assignCentroid( &items[i], i );
-    }
+    calculateNewCentroids();
+    calculateWeights(2); 
   }
 
   outfile.close();
 
 }
 
-void assignCentroid(Point* item, int point)
-{
-  double smallest = 999;
-  int chosenCentroid = k+1;
+// Function calculateWeights
+//
+// Each point on the space has a degree that express its belonging to each centroid
+//
+//
+void calculateWeights(int m=2) {
 
-  // iterate all centroids (k)
-  for( int i=0; i<k; i++)
-  {
-    // calculate distance from point item to centroid[i]
-    double distanceToCentroid = item->dist(centroid[i]);
+  double sumW = 0; // sum of weights
 
-    if( distanceToCentroid < smallest )
-    {
-      smallest = distanceToCentroid;
-      chosenCentroid = i;
+  // Iterate all points, for each point calculate the weight
+  for (int i = 0; i < dataCount; i++) {
+  
+    // Iterate all centroids
+    for (int j = 0; j < k; j++) {
+      // Iterated centroids again to calculate the weight
+
+      sumW = 0;
+      for (int intK = 0; intK < k; intK++) {
+        sumW += pow((items[i].dist(centroid[j])/items[i].dist(centroid[intK])), (2 / (m-1))); 
+      }
+
+      items[i].weightCentroid[j] = 1 / sumW;
+
     }
+  
   }
 
-  item->centroidAssigned = chosenCentroid;
-  centroidCount[chosenCentroid]++;
-
 }
-
-void calculateNewCentroid()
+void calculateNewCentroids()
 {
 
   // iterate centroids (k = number of centroids)
   for( int i=0; i<k; i++)
   {
-    cout << endl;
-    outfile << endl;
-
     // save old k th centroid
     oldCentroid[i] = centroid[i];
 
     Point pSum = {0.0, 0.0};
-    // double xsum = 0;
-    // double ysum = 0;
-     double count = 0;
+    double count = 0;
 
     // Calculate center of mass of centroid k, calculating average of x and y
     // Iterate items
     for( int j=0; j < dataCount; j++)
     {
-      // verifiy if item[j] was assigned to centroid k
-      if(items[j].centroidAssigned == i)
-      {
-        pSum = pSum + items[j];
-        count++;
-      }
+      // Sum the weighted vector of item j, to centroid i  
+      Point pW = items[j].weightCentroid[i] * items [j];
+      pSum = pSum + pW;
+      count += items[j].weightCentroid[i];
     }
 
     // Calculate new coordinate of centroid i
@@ -197,8 +192,11 @@ void calculateNewCentroid()
     // Calculate distance btw new centroid to old centroid
     double movement = centroid[i].dist(oldCentroid[i]);
 
-    cout << "New Centroid " << i << ":" << centroid[i] << endl;
+    cout << "New Centroid " << i << ":" << centroid[i] << "\t";
     outfile << "New Centroid " << i << ":" << centroid[i] << endl;
     cout << "Centroid moved " << movement << endl;
   }
+  cout << endl;
+  outfile << endl;
+
 }
