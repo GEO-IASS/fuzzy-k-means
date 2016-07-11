@@ -1,10 +1,9 @@
 /*
 
-   Implementation of fuzzy-k-means clustering algorithm with 2 dimensions
+   Implementation of fuzzy-k-means clustering algorithm multidimensional
 
    Based on David Robison implementation at https://github.com/drobison/k-means
 
-   This program implements both k-means and fuzzy k-means aka fuzzy c-means algorithm
 */
 
 #include <iostream>

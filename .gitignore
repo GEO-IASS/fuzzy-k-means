@@ -37,6 +37,7 @@ output.txt
 
 # Temporary files
 ~*
+*~
 *.tmp
 *.swo
 *.swp
