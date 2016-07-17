@@ -1,5 +1,6 @@
 # Project specific files
 output.txt
+build
 
 # Executables
 *.exe

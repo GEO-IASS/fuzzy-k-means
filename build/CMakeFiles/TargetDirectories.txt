@@ -1,0 +1,3 @@
+/Users/rbrandao/fuzzy-k-means/build/CMakeFiles/edit_cache.dir
+/Users/rbrandao/fuzzy-k-means/build/CMakeFiles/rebuild_cache.dir
+/Users/rbrandao/fuzzy-k-means/build/CMakeFiles/fkm.dir
