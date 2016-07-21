@@ -7,6 +7,8 @@
 */
 
 #include <iostream>
+#include <cstdio> 
+#include <cstdlib> 
 #include <fstream>
 #include <string>
 #include <algorithm>
@@ -16,7 +18,6 @@
 using namespace std;
 
 ifstream infile;
-ofstream outfile;
 
 class PointDataSet : public Point {
 
@@ -34,14 +35,15 @@ vector<PointDataSet> items;
 vector<Point> centroid;
 vector<Point> oldCentroid;
 
-int k = 5; // k = default number of centroids
-int dimensions = 5;  // Dimensions
+int k = 2; // k = default number of centroids
+double m = 1.8; // m = fuzzifier
+int dimensions = 34;  // Dimensions
 int dataCount = 0;  // dataCount = number of pointes read in input.txt divided by dimension
 int numberCount = 0; // numberCount = quantity of numbers read in input file
 
-void calculateWeights(int);
+void calculateWeights(double m);
 void assignCentroid(PointDataSet* item, int point);
-void calculateNewCentroids();
+void calculateNewCentroids(double m);
 
 int main(int argc, char* argv[]) {
 
@@ -73,30 +75,30 @@ int main(int argc, char* argv[]) {
     minOnDim[i] = 9.99e+20;
   }
 
+  cout << "Fuzzy k-means algorithm" << endl;
+  cout << "developed by ricardo brandao - https://github.com/programonauta/fuzzy-k-means" << endl;
+  cout << "=============================================================================" << endl;
+
   // Initialize counter 
   dataCount = 0;
   numberCount = 0;
 
-  outfile.open(output.c_str());
 
   // Read in input file.
   // Each line of input file must be two doubles (x and y)
   infile.open(input.c_str());
   if (!infile) {
-    cout << "Unable to open input."<< endl;
+    cout << "Unable to open input.txt file"<< endl << endl;
     return 1;
   }
 
-  srand (time(NULL));
+  cout << "Input file read successfully" << endl; 
 
-//  for (int i = 0; i < 10; i++) {
-//    dataCount++;
-//    items.resize(i+1);
-//    items[i].coord.resize(dimensions);
-//    items[i].weightCentroids.resize(k);
-//    for (int j = 0; j < dimensions; j++)
-//      items[i].coord[j] = (double)(rand() % 10000) / 100;
-//  }
+  srand (time(NULL));
+    
+  double newItem = 0;
+
+  infile >> newItem; // read new value
 
   while(!infile.eof()) {
     // Verifiy if it's necessary create another item
@@ -106,16 +108,16 @@ int main(int argc, char* argv[]) {
       items[dataCount].weightCentroids.resize(k);
       dataCount++;
     }
-    double newItem = 0;
-    infile >> newItem; // read new value
-    cout << "Numero do arquivo: " << newItem << endl;
     
     items[dataCount-1].coord[numberCount % dimensions] = newItem; // load new value on position
     // Calculate max and min values for current dimension
     if (newItem > maxOnDim[numberCount % dimensions]) maxOnDim[numberCount % dimensions] = newItem;
     if (newItem < minOnDim[numberCount % dimensions]) minOnDim[numberCount % dimensions] = newItem;
     numberCount++;
+    infile >> newItem; // read new value
   }
+
+  cout << dataCount << " data read" << endl;
 
   // Close input file
   infile.close();
@@ -123,27 +125,53 @@ int main(int argc, char* argv[]) {
   // Randomly chose initial centroids.
   for( int i=0; i<k; i++) {
     for (int j = 0; j < dimensions; j++)  
-      centroid[i].coord[j] = (double)(rand() % 10000) / 100;
-      //  (double)(rand() % (((int)(maxOnDim[j] * 1000) - (int)(minOnDim[j] * 1000)) + (int)(minOnDim[j] * 1000))) / 1000;
+      //centroid[i].coord[j] = (double)(rand() % 10000) / 100;
+      centroid[i].coord[j] =  (double)(rand() % (((int)(maxOnDim[j] * 1000000) - (int)(minOnDim[j] * 1000000)) + (int)(minOnDim[j] * 1000000))) / 1000000;
     // For debugging
     cout << "Centroid " << i << ", "<< centroid[i] << endl;
-    outfile << "Centroid " << i << ", " << centroid[i] << endl;
   }
 
   // Once define the first set of centroids, 
   // is need to calculate the weights per point, per centroid using fuzzifier 2
-  calculateWeights(2);
-
-  // Open output
+  calculateWeights(1.1);
 
   // Run 4 times, calculanting new centroids 
   for( int i=0; i < 20; i++) {
-    calculateNewCentroids();
-    calculateWeights(2); // Calculate Weight with fuzzifier 2 
+    calculateNewCentroids(m);
+    calculateWeights(m); // Calculate Weight with fuzzifier 2 
   }
 
-  outfile.close();
+  // Open edges.txt file
+  output = "edges.txt";
+  FILE* pFile = fopen("edges.txt", "w");
+  
+  // Write header of edge file
 
+  // For each point in dataset define edges for centroids
+ 
+  fprintf(pFile, "Id,Source,Target,Type,Weight\n");
+
+  int id;
+
+  for (int i = 0; i < dataCount; i++) 
+    for (int j = 0; j < k; j++)
+      if (items[i].weightCentroids[j] > 0.01)
+        fprintf(pFile, "%d,%d,k%02d,Undirected,%f\n", 1+id++, i+1, j+1, items[i].weightCentroids[j]);
+
+  fclose(pFile);
+
+  pFile = fopen("nodes.txt", "w");
+
+  fprintf(pFile, "Id,Label\n");
+
+  for (int i = 0; i < dataCount; i++)
+    fprintf(pFile,"%d,%d\n", i+1, i+1);
+
+  for (int i = 0; i < k; i++)
+    fprintf(pFile,"k%02d,k%02d\n", i+1, i+1);
+
+  fclose(pFile);
+  
 }
 
 // Function calculateWeights
@@ -153,7 +181,7 @@ int main(int argc, char* argv[]) {
 // Each point on the space has a degree that express its belonging to each centroid
 //
 //
-void calculateWeights(int m=2) {
+void calculateWeights(double m=2.0) {
 
   double sumW = 0; // sum of weights
 
@@ -180,7 +208,7 @@ void calculateWeights(int m=2) {
   }
 
 }
-void calculateNewCentroids() {
+void calculateNewCentroids(double m = 2.0) {
 
   // iterate centroids (k = number of centroids)
   for( int i=0; i<k; i++)
@@ -201,9 +229,9 @@ void calculateNewCentroids() {
     for( int j=0; j < dataCount; j++)
     {
       // Sum the weighted vector of item j, to centroid i  
-      Point pW = items[j].weightCentroids[i] * items [j];
+      Point pW = pow(items[j].weightCentroids[i], m) * items [j];
       pSum = pSum + pW;
-      count += items[j].weightCentroids[i];
+      count += pow(items[j].weightCentroids[i], 2);
     }
 
     // Calculate new coordinate of centroid i
@@ -213,10 +241,8 @@ void calculateNewCentroids() {
     double movement = centroid[i].dist(oldCentroid[i]);
 
     cout << "New Centroid " << i << ":" << centroid[i] << "\t";
-    outfile << "New Centroid " << i << ":" << centroid[i] << endl;
     cout << "Centroid moved " << movement << endl;
   }
   cout << endl;
-  outfile << endl;
 
 }
