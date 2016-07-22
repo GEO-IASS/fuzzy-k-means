@@ -36,7 +36,7 @@ vector<Point> centroid;
 vector<Point> oldCentroid;
 
 int k = 2; // k = default number of centroids
-double m = 1.8; // m = fuzzifier
+double m = 1.01; // m = fuzzifier
 int dimensions = 34;  // Dimensions
 int dataCount = 0;  // dataCount = number of pointes read in input.txt divided by dimension
 int numberCount = 0; // numberCount = quantity of numbers read in input file
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
   // is need to calculate the weights per point, per centroid using fuzzifier 2
   calculateWeights(1.1);
 
-  // Run 4 times, calculanting new centroids 
+  // Run calculanting new centroids 
   for( int i=0; i < 20; i++) {
     calculateNewCentroids(m);
     calculateWeights(m); // Calculate Weight with fuzzifier 2 
@@ -149,26 +149,23 @@ int main(int argc, char* argv[]) {
 
   // For each point in dataset define edges for centroids
  
-  fprintf(pFile, "Id,Source,Target,Type,Weight\n");
+  fprintf(pFile, "Id,Source,Target,Type\n");
 
   int id;
 
   for (int i = 0; i < dataCount; i++) 
-    for (int j = 0; j < k; j++)
-      if (items[i].weightCentroids[j] > 0.01)
-        fprintf(pFile, "%d,%d,k%02d,Undirected,%f\n", 1+id++, i+1, j+1, items[i].weightCentroids[j]);
+    for (int j = 0; j < dimensions; j++)
+      if (items[i].coord[j])
+        fprintf(pFile, "%d,%d,%d,Undirected,%d\n", 1+id++, i+1, j+1, 1); 
 
   fclose(pFile);
 
   pFile = fopen("nodes.txt", "w");
 
-  fprintf(pFile, "Id,Label\n");
+  fprintf(pFile, "Id,Label,Pertinency\n");
 
   for (int i = 0; i < dataCount; i++)
-    fprintf(pFile,"%d,%d\n", i+1, i+1);
-
-  for (int i = 0; i < k; i++)
-    fprintf(pFile,"k%02d,k%02d\n", i+1, i+1);
+    fprintf(pFile,"%d,%d,%f\n", i+1, i+1, items[i].weightCentroids[0]);
 
   fclose(pFile);
   
