@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
     cout << "-m <value>\tfuzzifier" << endl;
     cout << "-d <value>\tdimension, or number of attributes" << endl;
     cout << "-if <file>\tinput file" << endl;
-    cout << "-nf <file>\tnode suffix file: sufifix of output file which will have nodes." << endl;
+    cout << "-nf <file>\tnode suffix file: suffix of output file which will have nodes." << endl;
     cout << "          \t                  Will be generated one file for each cluster. The files names: <suffix>knnn.txt where nnn is the number of cluster." << endl;
     cout << "-ef <file>\tedge file: file generated with edges to be imported by Gephi software" << endl;
     return 0;
