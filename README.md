@@ -22,13 +22,13 @@ To run the program: `fkm <options>`
 
 ### Options
 
- Option  | 
- --------|------------
- `-h`      | show instructions
+ Option       | Description
+ -------------|------------
+ `-h`         | show instructions
  `-k <value>` | number of clusters or centroids
  `-m <value>` | fuzzifier (must be greater than 1)
  `-d <value>` | dimension of adjacency matrix
-  -i <value>  | max number of iterations
+ `-i <value>` | max number of iterations
  `-if <file>` | input file with sequencial values of adjacency matrix
- `-nf <file>  | node suffix file. Will be generated one file for each cluster
-  -ef <file>  | edge file
+ `-nf <file>` | node suffix file. Will be generated one file for each cluster
+ `-ef <file>` | edge file
