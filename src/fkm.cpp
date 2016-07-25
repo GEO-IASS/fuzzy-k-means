@@ -39,6 +39,7 @@ vector<Point> oldCentroid;
 int k = 4; // k = default number of centroids
 double m = 2.0; // m = fuzzifier
 int dimensions = 5;  // Dimensions
+int iterations = 20; // Max number of iterations
 int dataCount = 0;  // dataCount = number of pointes read in input.txt divided by dimension
 int numberCount = 0; // numberCount = quantity of numbers read in input file
 
@@ -61,6 +62,12 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
+double fRand(double fMin, double fMax)
+{
+  double f = (double)rand() / RAND_MAX;
+  return fMin + f * (fMax - fMin);
+}
+
 int main(int argc, char* argv[]) {
 
   string input = "input.txt";
@@ -74,7 +81,8 @@ int main(int argc, char* argv[]) {
   cout << "Fuzzy k-means algorithm" << endl;
   cout << "developed by ricardo brandao - https://github.com/programonauta/fuzzy-k-means" << endl;
   cout << "=============================================================================" << endl;
-
+  cout << "Log file: output.log" << endl;
+  
   // Verify command line options
   
   // Show help message if -h or there is no command options
@@ -88,12 +96,21 @@ int main(int argc, char* argv[]) {
     cout << "-k <value>\tnumber of clusters or centroids" << endl;
     cout << "-m <value>\tfuzzifier" << endl;
     cout << "-d <value>\tdimension, or number of attributes" << endl;
+    cout << "-i <value>\tmax number of iterations" << endl;
     cout << "-if <file>\tinput file" << endl;
     cout << "-nf <file>\tnode suffix file: suffix of output file which will have nodes." << endl;
     cout << "          \t                  Will be generated one file for each cluster. The files names: <suffix>knnn.txt where nnn is the number of cluster." << endl;
     cout << "-ef <file>\tedge file: file generated with edges to be imported by Gephi software" << endl;
     return 0;
   }
+
+  // Open log file
+  logfile.open("output.log");
+
+  logfile << "Fuzzy k-means algorithm" << endl;
+  logfile << "developed by ricardo brandao - https://github.com/programonauta/fuzzy-k-means" << endl;
+  logfile << "=============================================================================" << endl;
+  logfile << "Log file: output.log" << endl;
 
   // Option -k: Number of centroids
   if (cmdOptionExists(argv, argv+argc, "-k"))
@@ -103,6 +120,7 @@ int main(int argc, char* argv[]) {
     k = 2;
 
   cout << "Number of centroids: " << k << endl;
+  logfile<< "Number of centroids: " << k << endl;
   
   // Option -m: Fuzzifier
   if (cmdOptionExists(argv, argv+argc, "-m")) 
@@ -112,6 +130,7 @@ int main(int argc, char* argv[]) {
     m = 2.0;
 
   cout << "Fuzzifier: " << m << endl;
+  logfile << "Fuzzifier: " << m << endl;
 
   // Option -d: dimension
   if (cmdOptionExists(argv, argv+argc, "-d"))
@@ -121,6 +140,17 @@ int main(int argc, char* argv[]) {
     dimensions = 5;
 
   cout << "Dimension: " << dimensions << endl;
+  logfile << "Dimension: " << dimensions << endl;
+ 
+  // Option -i: iterations
+  if (cmdOptionExists(argv, argv+argc, "-i"))
+    iterations = atoi(getCmdOption(argv, argv+argc, "-i"));
+
+  if (iterations < 1)
+    iterations = 10;
+
+  cout << "Iterations: " << iterations << endl;
+  logfile << "Iterations: " << iterations << endl;
  
   if (cmdOptionExists(argv, argv+argc, "-if")) {
     input = std::string(getCmdOption(argv, argv+argc, "-if"));
@@ -152,10 +182,6 @@ int main(int argc, char* argv[]) {
   // Initialize counter 
   dataCount = 0;
   numberCount = 0;
-
-  // Open log file
-  logfile.open("output.log");
-  cout << "Log file: output.log" << endl;
 
   // Read in input file.
   // Each line of input file must be two doubles (x and y)
@@ -203,9 +229,8 @@ int main(int argc, char* argv[]) {
   // Randomly chose initial centroids.
   for( int i=0; i<k; i++) {
     for (int j = 0; j < dimensions; j++)  
-      //centroid[i].coord[j] = (double)(rand() % 10000) / 100;
-      centroid[i].coord[j] =  (double)(rand() % (((int)(maxOnDim[j] * 1000000) - (int)(minOnDim[j] * 1000000)) + (int)(minOnDim[j] * 1000000))) / 1000000;
-    // Logging first centroids
+      centroid[i].coord[j] = fRand(minOnDim[j], maxOnDim[j]); 
+
     logfile << "Centroid " << i << ", "<< centroid[i] << endl;
   }
 
@@ -214,7 +239,7 @@ int main(int argc, char* argv[]) {
   calculateWeights(m);
 
   // Run calculanting new centroids 
-  for( int i=0; i < 20; i++) {
+  for( int i=0; i < iterations; i++) {
     // Logging iterations
     logfile << "Iteration " << i+1 << endl;
     calculateNewCentroids(m);
@@ -241,7 +266,7 @@ int main(int argc, char* argv[]) {
  
   fprintf(pFile, "Id,Source,Target,Type\n");
 
-  int id;
+  int id=0;
   
   for (int i = 0; i < dataCount; i++) 
     for (int j = 0; j < dimensions; j++)
@@ -275,7 +300,7 @@ int main(int argc, char* argv[]) {
 
   logfile << "data\tweights" << endl;
   for (int i=0; i<dataCount; i++) {
-    logfile << i << "\t";
+    logfile << i+1 << "\t";
     for (int j=0; j<k; j++)
       logfile << (j>0? ", ": "") << items[i].weightCentroids[j];
     logfile << endl;
