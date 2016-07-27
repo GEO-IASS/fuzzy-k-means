@@ -45,10 +45,9 @@ int numberCount = 0; // numberCount = quantity of numbers read in input file
 
 void calculateWeights(double m);
 void assignCentroid(PointDataSet* item, int point);
-void calculateNewCentroids(double m);
+int calculateNewCentroids(double m);
 
-char* getCmdOption(char ** begin, char ** end, const std::string & option)
-{
+char* getCmdOption(char ** begin, char ** end, const std::string & option) {
   char ** itr = std::find(begin, end, option);
   if (itr != end && ++itr != end)
   {
@@ -62,10 +61,15 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
-double fRand(double fMin, double fMax)
-{
+double fRand(double fMin, double fMax) {
   double f = (double)rand() / RAND_MAX;
   return fMin + f * (fMax - fMin);
+}
+
+int iRand(int fMin, int fMax) {
+  int i = rand() % (int)(fMax+1 - fMin) + (int)fMin;
+  // int i = rand() % 2;
+  return i;
 }
 
 int main(int argc, char* argv[]) {
@@ -232,7 +236,7 @@ int main(int argc, char* argv[]) {
   // Randomly chose initial centroids.
   for( int i=0; i<k; i++) {
     for (int j = 0; j < dimensions; j++)  
-      centroid[i].coord[j] = fRand(minOnDim[j], maxOnDim[j]); 
+      centroid[i].coord[j] = (double)iRand((int)minOnDim[j], (int)maxOnDim[j]); 
 
     logfile << "Centroid " << i << ", "<< centroid[i] << endl;
   }
@@ -245,7 +249,8 @@ int main(int argc, char* argv[]) {
   for( int i=0; i < iterations; i++) {
     // Logging iterations
     logfile << "Iteration " << i+1 << endl;
-    calculateNewCentroids(m);
+    if (calculateNewCentroids(m))
+      return 1;;
     calculateWeights(m); // Calculate Weight with fuzzifier 2 
   }
 
@@ -335,7 +340,11 @@ void calculateWeights(double m=2.0) {
         sumW += pow((items[i].dist(centroid[j])/items[i].dist(centroid[intK])), (2 / (m-1))); 
       }
 
-      items[i].weightCentroids[j] = ((1 / sumW <= 1.0e-4)?0:1/sumW);
+      // if sumW is infinite, weightCentroids is zero
+      if (isnan(sumW))
+        items[i].weightCentroids[j] = 0;
+      else
+        items[i].weightCentroids[j] = (1 / sumW <1.0e-10?0:1/sumW);
 
     }
  
@@ -346,7 +355,7 @@ void calculateWeights(double m=2.0) {
   }
 
 }
-void calculateNewCentroids(double m = 2.0) {
+int calculateNewCentroids(double m = 2.0) {
 
   // iterate centroids (k = number of centroids)
   for( int i=0; i<k; i++)
@@ -373,6 +382,10 @@ void calculateNewCentroids(double m = 2.0) {
     }
 
     // Calculate new coordinate of centroid i
+    if (count == 0) {
+      cout << "Division by zero - calculateNewCentroids function" << endl; 
+      return 1;
+    }
     centroid[i] = (1.0/count) * pSum;
 
     // Calculate distance btw new centroid to old centroid
@@ -383,4 +396,5 @@ void calculateNewCentroids(double m = 2.0) {
   }
   logfile << endl;
 
+  return 0;
 }
