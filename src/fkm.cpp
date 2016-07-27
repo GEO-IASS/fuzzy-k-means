@@ -126,8 +126,11 @@ int main(int argc, char* argv[]) {
   if (cmdOptionExists(argv, argv+argc, "-m")) 
     m = atof(getCmdOption(argv, argv+argc, "-m"));
 
-  if (m <= 1)
-    m = 2.0;
+  if (m <= 1) {
+    cout << "Invalid option -m. Fuzzifier must be greater than 1" << endl;
+    return 1;
+  } 
+
 
   cout << "Fuzzifier: " << m << endl;
   logfile << "Fuzzifier: " << m << endl;
