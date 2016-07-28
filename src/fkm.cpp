@@ -378,7 +378,7 @@ int calculateNewCentroids(double m = 2.0) {
       // Sum the weighted vector of item j, to centroid i  
       Point pW = pow(items[j].weightCentroids[i], m) * items [j];
       pSum = pSum + pW;
-      count += pow(items[j].weightCentroids[i], 2);
+      count += pow(items[j].weightCentroids[i], m);
     }
 
     // Calculate new coordinate of centroid i
