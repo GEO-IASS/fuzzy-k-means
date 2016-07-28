@@ -102,9 +102,7 @@ int main(int argc, char* argv[]) {
     cout << "-d <value>\tdimension, or number of attributes" << endl;
     cout << "-i <value>\tmax number of iterations" << endl;
     cout << "-if <file>\tinput file" << endl;
-    cout << "-nf <file>\tnode suffix file: suffix of output file which will have nodes." << endl;
-    cout << "          \t                  Will be generated one file for each cluster. The files names: <suffix>knnn.txt where nnn is the number of cluster." << endl;
-    cout << "-ef <file>\tedge file: file generated with edges to be imported by Gephi software" << endl;
+    cout << "-of <file>\toutput file" << endl;
     return 0;
   }
 
@@ -239,80 +237,102 @@ int main(int argc, char* argv[]) {
       centroid[i].coord[j] = (double)iRand((int)minOnDim[j], (int)maxOnDim[j]); 
 
     logfile << "Centroid " << i << ", "<< centroid[i] << endl;
+    cout << "Centroid " << i << " defined" << endl;
   }
 
   // Once define the first set of centroids, 
   // is need to calculate the weights per point, per centroid using fuzzifier 2
+  cout << "Calculating weights" << endl;
   calculateWeights(m);
 
   // Run calculanting new centroids 
   for( int i=0; i < iterations; i++) {
     // Logging iterations
+    cout << "Iteration " << i+1 << " of " << iterations << endl;
     logfile << "Iteration " << i+1 << endl;
     if (calculateNewCentroids(m))
       return 1;;
     calculateWeights(m); // Calculate Weight with fuzzifier 2 
   }
 
-  output = "edges.txt";
-  // Open edges.txt file
-  if (cmdOptionExists(argv, argv+argc, "-ef")) {
-    output = std::string(getCmdOption(argv, argv+argc, "-ef"));
-
-    if (output == "")
-      output = "edges.txt";
-  }
-    
+//  output = "edges.txt";
+//  // Open edges.txt file
+//  if (cmdOptionExists(argv, argv+argc, "-ef")) {
+//    output = std::string(getCmdOption(argv, argv+argc, "-ef"));
+//
+//    if (output == "")
+//      output = "edges.txt";
+//  }
+//    
   FILE* pFile = fopen(output.c_str(), "w");
-  
-  cout << "-----------------------------------------------------------------------------" << endl;
-  cout << "writing edges on file " << output << endl;
-  logfile << "writing edges on file " << output << endl;
-  // Write header of edge file
-
-  // For each point in dataset define edges for centroids
- 
-  fprintf(pFile, "Id,Source,Target,Type\n");
-
-  int id=0;
-  
-  for (int i = 0; i < dataCount; i++) 
-    for (int j = 0; j < dimensions; j++)
-      if (items[i].coord[j])
-        fprintf(pFile, "%d,%d,%d,Undirected,%d\n", 1+id++, i+1, j+1, 1); 
-
-  fclose(pFile);
+//  
+//  cout << "-----------------------------------------------------------------------------" << endl;
+//  cout << "writing edges on file " << output << endl;
+//  logfile << "writing edges on file " << output << endl;
+//  // Write header of edge file
+//
+//  // For each point in dataset define edges for centroids
+// 
+//  fprintf(pFile, "Id,Source,Target,Type\n");
+//
+//  int id=0;
+//  
+//  for (int i = 0; i < dataCount; i++) 
+//    for (int j = 0; j < dimensions; j++)
+//      if (items[i].coord[j])
+//        fprintf(pFile, "%d,%d,%d,Undirected,%d\n", 1+id++, i+1, j+1, 1); 
+//
+//  fclose(pFile);
 
   char buffer[256];
 
-  output = "nodes";
+  output = "pertinence.txt";
   // Open edges.txt file
-  if (cmdOptionExists(argv, argv+argc, "-nf")) {
+  if (cmdOptionExists(argv, argv+argc, "-of")) {
     output = std::string(getCmdOption(argv, argv+argc, "-nf"));
 
     if (output == "")
-      output = "nodes";
+      output = "pertinence.txt";
   }
 
-  for (int i = 0; i < k; i++) {
-    snprintf(buffer, 256, "%sk%03d.txt", output.c_str(), i+1);
-    pFile = fopen(buffer, "w");
-    cout << "writing nodes with pertinence of cluster " << i+1 << " on file " << buffer << endl;
-    logfile << "writing nodes with pertinence of cluster " << i+1 << " on file " << buffer << endl;
-    fprintf(pFile, "Id,Label,Pertinence\n");
-    for (int j = 0; j < dataCount; j++) { 
-      fprintf(pFile,"%d,%d,%f\n", j+1, j+1, items[j].weightCentroids[i]);
-    }
-    fclose(pFile);
-  }
+  pFile = fopen(output.c_str(), "w");
+
+  fprintf(pFile, "data");
+
+  // Print header
+  for (int i = 0; i < k; i++) 
+    fprintf(pFile,",k%03d", i);
+  fprintf(pFile, "\n");
 
   logfile << "data\tweights" << endl;
   for (int i=0; i<dataCount; i++) {
     logfile << i+1 << "\t";
-    for (int j=0; j<k; j++)
+    fprintf(pFile, "%d,", i);
+    for (int j=0; j<k; j++) {
+      fprintf(pFile, "%f,", items[i].weightCentroids[j]);
       logfile << (j>0? ", ": "") << items[i].weightCentroids[j];
+    }
+    fprintf(pFile, "\n");
     logfile << endl;
   }
+  fclose(pFile);
+
+  // Create edges 
+  output = "edges.txt";
+
+  pFile = fopen(output.c_str(), "w");
+
+  // Create header
+  fprintf(pFile, "Id,Label,Source,Target,Type,Weight\n");
+
+  int id=0;
+  for (int i=0; i<dataCount; i++){
+    for (int j=0; j<k; j++)
+      fprintf(pFile, "%d,%d-k%03d,%d,k%03d,Undirected,%f\n", id++, i, j, i, j, items[i].weightCentroids[j]);
+  }
+
+  fclose(pFile);
+
   logfile.close();
 
 }
@@ -378,15 +398,12 @@ int calculateNewCentroids(double m = 2.0) {
       // Sum the weighted vector of item j, to centroid i  
       Point pW = pow(items[j].weightCentroids[i], m) * items [j];
       pSum = pSum + pW;
-      count += pow(items[j].weightCentroids[i], 2);
+      count += pow(items[j].weightCentroids[i], m);
     }
 
     // Calculate new coordinate of centroid i
-    if (count == 0) {
-      cout << "Division by zero - calculateNewCentroids function" << endl; 
-      return 1;
-    }
-    centroid[i] = (1.0/count) * pSum;
+    if (count > 0) 
+      centroid[i] = (1.0/count) * pSum;
 
     // Calculate distance btw new centroid to old centroid
     double movement = centroid[i].dist(oldCentroid[i]);
