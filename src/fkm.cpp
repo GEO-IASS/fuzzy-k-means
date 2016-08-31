@@ -102,7 +102,8 @@ int main(int argc, char* argv[]) {
     cout << "-d <value>\tdimension, or number of attributes" << endl;
     cout << "-i <value>\tmax number of iterations" << endl;
     cout << "-if <file>\tinput file" << endl;
-    cout << "-of <file>\toutput file" << endl;
+    cout << "-pf <file>\tpertinence output file" << endl;
+    cout << "-ef <file>\tedge output file" << endl;
     return 0;
   }
 
@@ -156,6 +157,7 @@ int main(int argc, char* argv[]) {
 
   cout << "Iterations: " << iterations << endl;
   logfile << "Iterations: " << iterations << endl;
+
  
   if (cmdOptionExists(argv, argv+argc, "-if")) {
     input = std::string(getCmdOption(argv, argv+argc, "-if"));
@@ -234,7 +236,9 @@ int main(int argc, char* argv[]) {
   // Randomly chose initial centroids.
   for( int i=0; i<k; i++) {
     for (int j = 0; j < dimensions; j++)  
-      centroid[i].coord[j] = (double)iRand((int)minOnDim[j], (int)maxOnDim[j]); 
+      // Distribute the dimensions
+      centroid[i].coord[j] = minOnDim[j]+((maxOnDim[j]-minOnDim[j])/(k-1))*i;
+      //centroid[i].coord[j] = fRand(minOnDim[j], maxOnDim[j]); 
 
     logfile << "Centroid " << i << ", "<< centroid[i] << endl;
     cout << "Centroid " << i << " defined" << endl;
@@ -255,46 +259,19 @@ int main(int argc, char* argv[]) {
     calculateWeights(m); // Calculate Weight with fuzzifier 2 
   }
 
-//  output = "edges.txt";
-//  // Open edges.txt file
-//  if (cmdOptionExists(argv, argv+argc, "-ef")) {
-//    output = std::string(getCmdOption(argv, argv+argc, "-ef"));
-//
-//    if (output == "")
-//      output = "edges.txt";
-//  }
-//    
-  FILE* pFile = fopen(output.c_str(), "w");
-//  
-//  cout << "-----------------------------------------------------------------------------" << endl;
-//  cout << "writing edges on file " << output << endl;
-//  logfile << "writing edges on file " << output << endl;
-//  // Write header of edge file
-//
-//  // For each point in dataset define edges for centroids
-// 
-//  fprintf(pFile, "Id,Source,Target,Type\n");
-//
-//  int id=0;
-//  
-//  for (int i = 0; i < dataCount; i++) 
-//    for (int j = 0; j < dimensions; j++)
-//      if (items[i].coord[j])
-//        fprintf(pFile, "%d,%d,%d,Undirected,%d\n", 1+id++, i+1, j+1, 1); 
-//
-//  fclose(pFile);
-
+  FILE* pFile; 
+  
   char buffer[256];
 
   output = "pertinence.txt";
-  // Open edges.txt file
-  if (cmdOptionExists(argv, argv+argc, "-of")) {
-    output = std::string(getCmdOption(argv, argv+argc, "-nf"));
+  
+  if (cmdOptionExists(argv, argv+argc, "-pf")) {
+    output = std::string(getCmdOption(argv, argv+argc, "-pf"));
 
     if (output == "")
       output = "pertinence.txt";
   }
-
+    
   pFile = fopen(output.c_str(), "w");
 
   fprintf(pFile, "data");
@@ -304,12 +281,21 @@ int main(int argc, char* argv[]) {
     fprintf(pFile,",k%03d", i);
   fprintf(pFile, "\n");
 
+  for( int i=0; i<k; i++) {
+    fprintf(pFile, "k%03d", i);
+    for (int j = 0; j < dimensions; j++)  
+      fprintf(pFile,",%f",centroid[i].coord[j]);
+
+    fprintf(pFile, "\n");
+  }
+   output = "edges.txt";
+
   logfile << "data\tweights" << endl;
   for (int i=0; i<dataCount; i++) {
     logfile << i+1 << "\t";
-    fprintf(pFile, "%d,", i);
+    fprintf(pFile, "%d", i);
     for (int j=0; j<k; j++) {
-      fprintf(pFile, "%f,", items[i].weightCentroids[j]);
+      fprintf(pFile, ",%f", items[i].weightCentroids[j]);
       logfile << (j>0? ", ": "") << items[i].weightCentroids[j];
     }
     fprintf(pFile, "\n");
@@ -318,7 +304,13 @@ int main(int argc, char* argv[]) {
   fclose(pFile);
 
   // Create edges 
-  output = "edges.txt";
+  if (cmdOptionExists(argv, argv+argc, "-ef")) {
+    output = std::string(getCmdOption(argv, argv+argc, "-ef"));
+
+    if (output == "")
+      output = "edges.txt";
+  }
+    
 
   pFile = fopen(output.c_str(), "w");
 
